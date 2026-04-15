@@ -7,6 +7,7 @@ __pycache__/
 .DS_Store
 
 # ODAT-SE algorithm output (reproducible by running scripts)
+results/
 output*/
 
 # Intermediate data (reproducible)

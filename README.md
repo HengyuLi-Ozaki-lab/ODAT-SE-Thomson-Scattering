@@ -33,20 +33,16 @@ pip install matplotlib
 ### Run
 
 ```bash
-# 1. Generate synthetic data
-python generate_synthetic_data.py
+# Run the full test suite (all tests + figure generation)
+python run_tests.py
 
-# 2. Run all 5 algorithms
-python run_all.py
-
-# 3. Generate analysis plots
-python analysis/plot_results.py
-
-# 4. Run Bayesian model selection
-python model_selection/run_model_selection.py
-
-# 5. Run LHD-based validation
-python run_lhd_test.py
+# Or run individual test sections:
+python run_tests.py benchmark   # 5-algorithm comparison
+python run_tests.py multipoint  # 5 radial positions (NM + PAMC)
+python run_tests.py profile     # Full 109-point profile scan
+python run_tests.py model       # Bayesian model selection
+python run_tests.py perf        # Noise/coverage/scalability benchmarks
+python run_tests.py figures     # Regenerate figures only
 ```
 
 ## Project Structure
@@ -56,23 +52,19 @@ python run_lhd_test.py
 ├── ODAT-SE_Thomson_Scattering_Analysis.md   # Technical report
 ├── thomson_model.py                          # Forward model
 ├── generate_synthetic_data.py                # Synthetic data generator
-├── run_all.py                                # 5-algorithm benchmark
-├── run_lhd_test.py                           # LHD real-data validation
+├── run_tests.py                              # Comprehensive test suite
 ├── data/
 │   └── thomson_175916.txt                    # LHD analyzed data (Shot #175916)
-├── config/
-│   ├── minsearch.toml                        # Nelder-Mead
-│   ├── mapper.toml                           # Grid Search
-│   ├── bayes.toml                            # Bayesian Optimization
-│   ├── exchange.toml                         # Replica Exchange MC
-│   ├── pamc.toml                             # Population Annealing MC
-│   ├── model_maxwell.toml                    # Model selection: Maxwell
-│   └── model_kappa.toml                      # Model selection: Kappa
+├── config/                                   # ODAT-SE TOML configurations
+│   ├── minsearch.toml, mapper.toml, bayes.toml
+│   ├── exchange.toml, pamc.toml
+│   └── model_maxwell.toml, model_kappa.toml
 ├── model_selection/
 │   └── run_model_selection.py
 ├── analysis/
 │   └── plot_results.py
-└── figures/                                  # Generated figures
+├── figures/                                  # Generated figures
+└── results/                                  # Algorithm output (gitignored)
 ```
 
 ## Key Results
