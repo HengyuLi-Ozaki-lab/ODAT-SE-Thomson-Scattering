@@ -1,0 +1,28 @@
+[base]
+dimension = 3
+output_dir = "output_kappa"
+
+[solver]
+name = "function"
+
+[algorithm]
+name = "pamc"
+seed = 54321
+label_list = ["Te", "ne", "kappa"]
+
+[algorithm.param]
+min_list = [10.0, 0.1, 2.1]
+max_list = [5000.0, 10.0, 50.0]
+step_list = [50.0, 0.3, 1.0]
+
+[algorithm.pamc]
+numsteps_annealing = 50
+Tmin = 0.1
+Tmax = 100.0
+Tnum = 21
+Tlogspace = true
+nreplica_per_proc = 100
+
+[runner]
+[runner.log]
+interval = 20

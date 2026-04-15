@@ -6,33 +6,14 @@ __pycache__/
 # macOS
 .DS_Store
 
-# ODAT-SE algorithm output directories (reproducible by running scripts)
-thomson_scattering/minsearch/output/
-thomson_scattering/mapper/output/
-thomson_scattering/bayes/output/
-thomson_scattering/exchange/output/
-thomson_scattering/pamc/output/
-thomson_scattering/model_selection/output_maxwell/
-thomson_scattering/model_selection/output_kappa/
+# ODAT-SE algorithm output (reproducible by running scripts)
+output*/
 
 # Intermediate data (reproducible)
-thomson_scattering/synthetic_data.npz
-thomson_scattering/lhd_test_points.npz
-thomson_scattering/lhd_test_results.npz
-thomson_scattering/benchmark_results.npz
-
-# Temporary files
-/tmp/
-*.tmp
-
-# LHD raw data (too large / not redistributable)
-lhd_data/
-Thomson041326-001.dat
-thomson@175916_1.txt
-
-# Original poster and abstract (not part of this project)
-poster_v2.pdf
-abstract_v2.docx
+synthetic_data.npz
+lhd_test_points.npz
+lhd_test_results.npz
+benchmark_results.npz
 
 # Claude plans
 .claude/

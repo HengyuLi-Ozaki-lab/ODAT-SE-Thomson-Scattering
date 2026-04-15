@@ -34,7 +34,7 @@ $$\sigma_\lambda = \lambda_0 \sqrt{\frac{2\,T_e}{m_e c^2}} = \lambda_0 \sqrt{\fr
 
 For example, at $T_e = 500$ eV, $\sigma_\lambda \approx 47$ nm. The following figure shows the Thomson spectra at different temperatures and the polychromator channel positions:
 
-![Thomson spectra and polychromator channels](thomson_scattering/analysis/figures/thomson_spectrum_filters.png)
+![Thomson spectra and polychromator channels](figures/thomson_spectrum_filters.png)
 
 *Fig. 1. Thomson scattering spectra for $T_e$ = 100, 500, 1500, and 5000 eV (colored curves), overlaid with five polychromator bandpass filter channels (gray shaded regions). Higher temperature produces broader spectra. The laser wavelength (1064 nm, dashed red) is excluded from the filters to avoid stray light contamination.*
 
@@ -72,9 +72,9 @@ ODAT-SE provides a modular framework that decouples search/sampling algorithms f
 | Replica Exchange MC | MCMC sampler | Parallel tempering for multimodal posteriors |
 | Population Annealing MC | MCMC sampler | Full posterior + free energy for model selection |
 
-![ODAT-SE architecture](thomson_scattering/analysis/figures/odatse_architecture.png)
+![ODAT-SE architecture](figures/odatse_architecture.png)
 
-*Fig. 2. Modular architecture of ODAT-SE. Search algorithms (left) communicate with interchangeable solver modules (right) through a standardized interface: the algorithm proposes parameter values $X$, and the solver returns the objective function value $F(X)$.*
+*Fig. 2. Modular architecture of ODAT-SE. Left: five built-in search/sampling algorithms. Right: interchangeable solver modules for material science (TRHEPD, LEED) and fusion plasma diagnostics (Thomson scattering and future extensions).*
 
 ### 3.2 Thomson Scattering Solver Module
 
@@ -152,7 +152,7 @@ Five representative radial positions were selected from the LHD profile:
 
 Nelder-Mead optimization was applied to all 109 spatial points with good data quality ($dT_e/T_e < 30\%$):
 
-![LHD profile reconstruction](thomson_scattering/analysis/figures/lhd_profile_scan.png)
+![LHD profile reconstruction](figures/lhd_profile_scan.png)
 
 *Fig. 3. ODAT-SE reconstruction of the LHD Thomson scattering radial profile (Shot #175916, $t = 36300.1$ ms). Gray circles: LHD analyzed values with error bars. Blue squares: ODAT-SE Nelder-Mead inversion results. Top: electron temperature $T_e$. Bottom: electron density $n_e$.*
 
@@ -169,7 +169,7 @@ Overall statistics across 109 points:
 
 The PAMC algorithm provides the full posterior distribution, not just a point estimate. The following figure shows the annealing process for the mid-radius point ($T_e = 1495$ eV, $n_e = 1.577 \times 10^{19}$ m$^{-3}$):
 
-![PAMC search process](thomson_scattering/analysis/figures/pamc_search_process.png)
+![PAMC search process](figures/pamc_search_process.png)
 
 *Fig. 4. PAMC annealing for Thomson scattering inverse inference at the LHD mid-radius position. Left: high-temperature exploration ($T = 100$) with samples broadly distributed across the parameter space. Right: low-temperature concentration ($T \approx 1$) with samples converging to the $\chi^2$ minimum near the true values (green star). Contour lines reveal the $T_e$-$n_e$ parameter correlation.*
 
@@ -222,7 +222,7 @@ Nelder-Mead achieves the same optimum in 0.01 s --- approximately 270x faster th
 
 The inversion accuracy was tested across SNR levels from 5 to 100, with 10 independent noise realizations per level:
 
-![Noise sensitivity](thomson_scattering/analysis/figures/noise_sensitivity.png)
+![Noise sensitivity](figures/noise_sensitivity.png)
 
 *Fig. 5. Inversion accuracy (relative error) as a function of signal-to-noise ratio. Each point represents the mean over 10 trials; error bars show the standard deviation. Both $T_e$ and $n_e$ errors decrease monotonically with increasing SNR, with $n_e$ being more sensitive to noise at low SNR.*
 
@@ -235,7 +235,7 @@ The inversion accuracy was tested across SNR levels from 5 to 100, with 10 indep
 
 The forward model validity was tested across the full $T_e$ range relevant to LHD:
 
-![Te coverage](thomson_scattering/analysis/figures/te_coverage.png)
+![Te coverage](figures/te_coverage.png)
 
 *Fig. 6. (a) Inverted vs. true $T_e$ across the range 50--8000 eV. The diagonal line indicates perfect recovery. (b) Relative error for each $T_e$ value.*
 
@@ -245,7 +245,7 @@ The non-relativistic Gaussian model works well for $T_e \lesssim 3000$ eV (error
 
 The effect of the number of PAMC replicas on computation time, posterior quality, and free energy convergence:
 
-![PAMC scalability](thomson_scattering/analysis/figures/pamc_scalability.png)
+![PAMC scalability](figures/pamc_scalability.png)
 
 *Fig. 7. PAMC scalability with replica count. (a) Wall-clock time scales linearly with the number of replicas. (b) Posterior width ($T_e$ standard deviation) stabilizes above ~50 replicas. (c) Free energy estimate $\ln Z$ converges as the replica count increases.*
 

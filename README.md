@@ -2,7 +2,7 @@
 
 Bayesian inverse inference of electron temperature ($T_e$) and density ($n_e$) from Thomson scattering diagnostics using [ODAT-SE](https://github.com/issp-center-dev/ODAT-SE), an open-source modular inverse problem solving platform.
 
-![ODAT-SE Architecture](thomson_scattering/analysis/figures/odatse_architecture.png)
+![ODAT-SE Architecture](figures/odatse_architecture.png)
 
 ## Highlights
 
@@ -12,13 +12,11 @@ Bayesian inverse inference of electron temperature ($T_e$) and density ($n_e$) f
 - **Validated with real LHD data**: Shot #175916 Thomson scattering profile (109 spatial points)
 - **Performance**: Nelder-Mead 0.01s/point, PAMC 7s/point (full posterior + free energy)
 
-![PAMC Search Process](thomson_scattering/analysis/figures/pamc_search_process.png)
+![PAMC Search Process](figures/pamc_search_process.png)
 
 ## Documentation
 
 - **[Technical Report](ODAT-SE_Thomson_Scattering_Analysis.md)** — Full analysis with theory, implementation, results, and benchmarks
-- **[Build & Test Log](thomson_scattering/BUILD_AND_TEST_LOG.md)** — Step-by-step build and test record
-- **[Application Design](ODAT-SE_Fusion_Application.md)** — Background and motivation document
 
 ## Quick Start
 
@@ -26,8 +24,7 @@ Bayesian inverse inference of electron temperature ($T_e$) and density ($n_e$) f
 
 ```bash
 # Install ODAT-SE v3.0.0
-cd /path/to/ODAT-SE-3.0.0
-pip install -e ".[min_search,bayes]"
+pip install ODAT-SE[min_search,bayes]
 
 # Additional dependencies
 pip install matplotlib
@@ -36,8 +33,6 @@ pip install matplotlib
 ### Run
 
 ```bash
-cd thomson_scattering/
-
 # 1. Generate synthetic data
 python generate_synthetic_data.py
 
@@ -50,30 +45,34 @@ python analysis/plot_results.py
 # 4. Run Bayesian model selection
 python model_selection/run_model_selection.py
 
-# 5. Run LHD-based validation (requires thomson@175916_1.txt)
+# 5. Run LHD-based validation
 python run_lhd_test.py
 ```
 
 ## Project Structure
 
 ```
-thomson_scattering/
-    thomson_model.py              # Thomson scattering forward model
-    generate_synthetic_data.py    # Synthetic data generator
-    run_all.py                    # Master benchmark script (5 algorithms)
-    run_lhd_test.py               # LHD real-data validation
-    minsearch/input.toml          # Nelder-Mead configuration
-    mapper/input.toml             # Grid Search configuration
-    bayes/input.toml              # Bayesian Optimization configuration
-    exchange/input.toml           # Replica Exchange MC configuration
-    pamc/input.toml               # Population Annealing MC configuration
-    model_selection/
-        run_model_selection.py    # Maxwell vs Kappa EVDF comparison
-        input_maxwell.toml
-        input_kappa.toml
-    analysis/
-        plot_results.py           # Visualization scripts
-        figures/                  # All generated figures
+├── README.md
+├── ODAT-SE_Thomson_Scattering_Analysis.md   # Technical report
+├── thomson_model.py                          # Forward model
+├── generate_synthetic_data.py                # Synthetic data generator
+├── run_all.py                                # 5-algorithm benchmark
+├── run_lhd_test.py                           # LHD real-data validation
+├── data/
+│   └── thomson_175916.txt                    # LHD analyzed data (Shot #175916)
+├── config/
+│   ├── minsearch.toml                        # Nelder-Mead
+│   ├── mapper.toml                           # Grid Search
+│   ├── bayes.toml                            # Bayesian Optimization
+│   ├── exchange.toml                         # Replica Exchange MC
+│   ├── pamc.toml                             # Population Annealing MC
+│   ├── model_maxwell.toml                    # Model selection: Maxwell
+│   └── model_kappa.toml                      # Model selection: Kappa
+├── model_selection/
+│   └── run_model_selection.py
+├── analysis/
+│   └── plot_results.py
+└── figures/                                  # Generated figures
 ```
 
 ## Key Results
@@ -89,10 +88,6 @@ thomson_scattering/
 2. I. Yamada et al., *J. Fusion Energy* **44**, 54 (2025). [LHD Thomson]
 3. K. Yoshimi et al., arXiv:2505.18390 (2025). [ODAT-SE v3]
 4. K. Saito et al., arXiv:2511.06330 (2025). [CHD Thomson + ODAT-SE]
-
-## License
-
-This project is provided for academic and research purposes.
 
 ## Acknowledgments
 
