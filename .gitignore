@@ -15,5 +15,14 @@ lhd_test_points.npz
 lhd_test_results.npz
 benchmark_results.npz
 
+# Local-only directories (not part of the repo)
+docs/
+lhd_raw/
+lhd_data/
+scripts/
+
+# Temp files
+~$*
+
 # Claude plans
 .claude/
