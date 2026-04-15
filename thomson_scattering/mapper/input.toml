@@ -1,0 +1,20 @@
+[base]
+dimension = 2
+output_dir = "output"
+
+[solver]
+name = "function"
+
+[algorithm]
+name = "mapper"
+seed = 12345
+label_list = ["Te", "ne"]
+
+[algorithm.param]
+min_list = [50.0, 0.5]
+max_list = [2000.0, 8.0]
+num_list = [100, 50]
+
+[runner]
+[runner.log]
+interval = 20
