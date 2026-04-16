@@ -386,16 +386,91 @@ These findings have important implications for the interpretation of Thomson sca
 
 ---
 
-## 9. Discussion
+## 9. Multi-timestep Noise Characterization
 
-### 9.1 Strengths of the ODAT-SE Approach
+While Sections 7–8 used synthetic data with modeled noise, the LHD dataset contains 1200 time slices for every spatial point. During steady-state discharge, the physical plasma parameters are approximately constant, so time-to-time fluctuations in the analyzed $T_e$ and $n_e$ reflect the **combined effect of measurement noise, calibration drift, and real plasma fluctuations**. This provides a unique opportunity to characterize the true noise properties of the Thomson scattering diagnostic using real data alone.
+
+We identify a steady-state window ($t \approx 3100$–$19700$ ms) and analyze 113 spatial points, each with $\sim$500 independent time steps.
+
+![Time trace](figures/multistep_time_trace.png)
+
+*Fig. 14. Time trace of $T_e$ and $n_e$ at $R = 3137$ mm during steady-state discharge (499 time steps). Individual measurements (dots) scatter around the mean (red line) with ±1σ band (shaded). The scatter exceeds the reported single-shot uncertainty $dT_e$.*
+
+![Multi-timestep analysis](figures/multistep_noise_analysis.png)
+
+*Fig. 15. Multi-timestep noise analysis. (a) Ratio of observed scatter to reported uncertainty across the radial profile — values above 1.0 indicate the reported $dT_e$ underestimates the true variability. (b) Normalized residual distributions — the $T_e$ residuals (blue) are far wider than the expected $N(0,1)$ (dashed), while $n_e$ (orange) is closer. (c) Cumulative time-averaging shows convergence of the mean. (d) Autocorrelation functions reveal significant temporal correlations at short lags.*
+
+### 9.1 Analysis 1: Observed Scatter vs. Reported Uncertainty
+
+For each spatial point, we compare the observed standard deviation of $T_e$ across $\sim$500 time steps with the mean reported uncertainty $\langle dT_e \rangle$:
+
+| Parameter | $\sigma_{\text{observed}} / \langle d_{\text{reported}} \rangle$ (median) | Interpretation |
+|-----------|:---:|------|
+| $T_e$ | 1.36 | Reported $dT_e$ underestimates true scatter by ~36% |
+| $n_e$ | 1.12 | Reported $dn_e$ is approximately correct |
+
+The ratio varies across the profile (Fig. 15a): it is close to 1.0 near the plasma edge (low $T_e$) but rises to 1.5–2.0 in the core and near-core regions, where plasma fluctuations (e.g., MHD activity, sawtooth oscillations) contribute additional variability beyond measurement noise.
+
+### 9.2 Analysis 2: Time-Averaging and $\sqrt{N}$ Scaling
+
+If time-step measurements were independent, averaging $K$ measurements should reduce the standard deviation by $\sqrt{K}$. Bootstrap resampling at $R = 3137$ mm confirms this scaling:
+
+| $K$ (averaged) | Expected $\sigma / \sqrt{K}$ | Observed std | Agreement |
+|:---:|:---:|:---:|:---:|
+| 1 | 259 eV | 264 eV | ✓ |
+| 10 | 82 eV | 76 eV | ✓ |
+| 100 | 26 eV | 26 eV | ✓ |
+| 200 | 18 eV | 15 eV | ~✓ |
+
+The $\sqrt{N}$ scaling holds approximately, indicating that time-averaging can effectively reduce statistical uncertainty despite the temporal correlations found in Analysis 4.
+
+### 9.3 Analysis 3: Normalized Residual ($z$-score) Test
+
+If the reported uncertainties $dT_{e,i}$ accurately represent the true measurement error, the normalized residuals $z_i = (T_{e,i} - \langle T_e \rangle) / dT_{e,i}$ should follow a standard normal distribution $N(0, 1)$.
+
+| Parameter | $\text{std}(z)$ | Expected | Implication |
+|-----------|:---:|:---:|------|
+| $T_e$ | **7.96** | 1.0 | $dT_e$ captures only ~13% of true variability |
+| $n_e$ | **1.28** | 1.0 | $dn_e$ slightly underestimates (~78% of true) |
+
+The $T_e$ result ($\text{std}(z) = 7.96$) is striking: the actual scatter is nearly 8 times larger than what $dT_e$ predicts. However, this does **not** necessarily indicate a failure of the LHD analysis — the excess variability likely includes **real plasma physics** (low-frequency fluctuations, transport events, sawtooth crashes) that is not measurement noise. The LHD-reported $dT_e$ represents the **statistical fitting uncertainty** for a single laser pulse, not the total variability including plasma dynamics.
+
+### 9.4 Analysis 4: Temporal Autocorrelation
+
+The autocorrelation function (ACF) tests whether successive time-step measurements are independent:
+
+| Parameter | ACF(lag=1) | ACF(lag=5) | ACF(lag=10) | Significant lags (out of 49) |
+|-----------|:---:|:---:|:---:|:---:|
+| $T_e$ | 0.69 | 0.57 | 0.33 | 27 (**correlated**) |
+| $n_e$ | 0.85 | 0.68 | 0.24 | 47 (**strongly correlated**) |
+
+Both parameters show strong temporal correlations (Fig. 15d), with $n_e$ being particularly persistent. This confirms that the time-step fluctuations are not pure white noise — they contain slow-varying components with correlation times of 5–10 laser pulses. The physical sources likely include:
+
+- **Plasma transport and MHD activity**: real density and temperature fluctuations on ~1–10 ms timescales
+- **Laser energy fluctuations**: pulse-to-pulse power variation affecting the scattered signal amplitude
+- **Calibration drift**: slow changes in detector gain or optical alignment during the discharge
+
+### 9.5 Implications
+
+These findings have direct consequences for how ODAT-SE results should be interpreted:
+
+1. **Single-shot ODAT-SE inversions are limited by the noise floor of the diagnostic**, which is larger than the LHD-reported $dT_e$ suggests. The PAMC posterior undercovers (Section 8.3) partly because the assumed noise model is too optimistic.
+2. **Multi-shot averaging is effective**: despite temporal correlations, the $\sqrt{N}$ reduction approximately holds, suggesting that ODAT-SE applied to time-averaged polychromator signals would achieve significantly better accuracy.
+3. **Separating measurement noise from plasma fluctuations** is essential for fair benchmarking. A time-frequency analysis (e.g., wavelet decomposition) could decompose the total variability into instrument noise (high-frequency, white) and plasma physics (low-frequency, correlated), enabling more accurate noise models for ODAT-SE.
+4. **The autocorrelation structure provides information** that could be exploited: a temporal Bayesian model incorporating correlations between successive measurements would yield tighter constraints than treating each pulse independently.
+
+---
+
+## 10. Discussion
+
+### 10.1 Strengths of the ODAT-SE Approach
 
 1. **Modularity**: The Thomson forward model is a self-contained Python function, trivially swappable for other spectral models (relativistic, CTS, etc.)
 2. **Algorithm comparison**: The same forward model can be tested with all five algorithms without code changes
 3. **Bayesian model selection**: PAMC provides free energy estimates unavailable in standard fitting tools, enabling principled EVDF discrimination
 4. **Reproducibility**: Open-source framework with TOML configuration files
 
-### 9.2 Limitations and Future Work
+### 10.2 Limitations and Future Work
 
 1. **Non-relativistic approximation**: The current Gaussian spectral model is accurate only for $T_e \lesssim 3$ keV. Extending to the Selden function or Naito-Kato-Nurunaga relativistic correction is straightforward within the modular framework.
 2. **Simplified polychromator model**: Real filter functions are not perfect Gaussians and must be measured experimentally. The framework accepts arbitrary filter functions.
@@ -404,7 +479,7 @@ These findings have important implications for the interpretation of Thomson sca
 
 ---
 
-## 10. Summary
+## 11. Summary
 
 We demonstrated that ODAT-SE provides an effective platform for Bayesian inverse inference of fusion plasma Thomson scattering diagnostics. Using synthetic polychromator data generated from real LHD plasma parameters:
 
