@@ -253,16 +253,99 @@ The computation time scales linearly: $t \approx 0.07 \times N_{rep}$ seconds (s
 
 ---
 
-## 8. Discussion
+## 8. Statistical Analysis of MLE Bias
 
-### 8.1 Strengths of the ODAT-SE Approach
+### 8.1 Observation: The $\chi^2$ Minimum Does Not Coincide with the True Parameters
+
+A careful inspection of the inversion results reveals that the $\chi^2$ minimum consistently deviates from the true parameter values. For instance, at the LHD mid-radius point with true values $(T_e = 1495$ eV$, n_e = 1.577 \times 10^{19}$ m$^{-3})$, Nelder-Mead converges to $(T_e \approx 1422$ eV$, n_e \approx 1.68)$ — a systematic underestimate of $T_e$ by ~5% and overestimate of $n_e$ by ~7%. This deviation is not a failure of the optimization algorithm; it reflects a fundamental statistical property of maximum likelihood estimation (MLE) under noise.
+
+### 8.2 Monte Carlo Validation
+
+To rigorously characterize this bias, we performed a Monte Carlo study: for the same true parameters, 200 independent noise realizations were generated (each with a different random seed), and Nelder-Mead was applied to each. An additional 50 trials were run with PAMC to assess posterior coverage.
+
+![MLE scatter distribution](figures/mc_stat_scatter.png)
+
+*Fig. 8. Distribution of parameter estimates over 200 independent noise realizations. Left: Nelder-Mead MLE scatter with 1σ ellipse. Right: PAMC posterior mean scatter with individual error bars. In both cases, the distribution is centered away from the true value (red star), revealing a systematic bias.*
+
+![MLE bias histograms](figures/mc_stat_histograms.png)
+
+*Fig. 9. Top: distributions of $T_e$ and $n_e$ estimates from Nelder-Mead (blue) and PAMC (green) across Monte Carlo trials. True values are marked by red dashed lines. Bottom: relative error distributions showing the mean bias is non-zero for both algorithms.*
+
+**Key results:**
+
+| Estimator | $T_e$ bias | $n_e$ bias | $T_e$ std | $n_e$ std |
+|-----------|:---:|:---:|:---:|:---:|
+| Nelder-Mead MLE (200 trials) | $-120$ eV ($-8.0\%$) | $+0.108$ ($+6.8\%$) | 54 eV | 0.023 |
+| PAMC posterior mean (50 trials) | $-113$ eV ($-7.5\%$) | $+0.109$ ($+6.9\%$) | 54 eV | 0.023 |
+
+Both Nelder-Mead and PAMC converge to the same biased point — confirming that the bias originates from the $\chi^2$ landscape itself, not from the optimization algorithm.
+
+### 8.3 PAMC Posterior Coverage
+
+For each of the 50 PAMC trials, we tested whether the true parameter values fell within the reported posterior uncertainty:
+
+![PAMC coverage](figures/mc_stat_coverage.png)
+
+*Fig. 10. PAMC posterior coverage probability. Observed coverage (green) compared to expected Gaussian coverage (gray). The posterior is systematically too narrow, indicating underestimated uncertainties.*
+
+| Interval | $T_e$ observed | $T_e$ expected | $n_e$ observed | $n_e$ expected |
+|----------|:-:|:-:|:-:|:-:|
+| 1σ | 22% | 68% | 0% | 68% |
+| 2σ | 68% | 95% | 14% | 95% |
+
+The posterior severely undercovers — the true values fall within the PAMC 1σ interval only 22% of the time for $T_e$ (expected 68%) and 0% for $n_e$. This indicates the PAMC posterior widths underestimate the true uncertainty by approximately a factor of 3.
+
+### 8.4 Physical Origin of the Bias
+
+The bias arises from the **asymmetric coupling between $T_e$ and $n_e$** in the Thomson scattering forward model. The channel signal is:
+
+$$S_i(T_e, n_e) = n_e \times \int T_i(\lambda) \cdot S(\lambda; T_e)\,d\lambda$$
+
+where $S(\lambda; T_e) \propto (1/\sigma_\lambda) \exp[-(\lambda-\lambda_0)^2/(2\sigma_\lambda^2)]$ and $\sigma_\lambda \propto \sqrt{T_e}$. This creates an asymmetric response:
+
+- **Decreasing $T_e$** narrows the spectrum → concentrates signal in the central channels → can be compensated by **increasing $n_e$** to maintain the total amplitude
+- The $\sqrt{T_e}$ dependence means the spectral width changes more slowly at high $T_e$ than at low $T_e$
+
+This asymmetry in the $\chi^2$ landscape causes the MLE to be systematically pulled toward lower $T_e$ and higher $n_e$ relative to the true values. This is an inherent **information-theoretic limitation** of the 5-channel polychromator configuration, not an algorithmic deficiency.
+
+### 8.5 Attempted Bias Mitigation Strategies
+
+We tested three objective function modifications to reduce the bias:
+
+![Bias comparison](figures/bias_comparison.png)
+
+*Fig. 11. Comparison of four objective function strategies (100 MC trials each). None significantly reduces the systematic bias.*
+
+| Strategy | $T_e$ bias | $n_e$ bias | Effect |
+|----------|:---:|:---:|--------|
+| Baseline ($\chi^2$ in linear space) | $-126$ eV ($-8.4\%$) | $+0.108$ ($+6.8\%$) | Reference |
+| Log-space parameterization | $-126$ eV ($-8.4\%$) | $+0.108$ ($+6.8\%$) | No change |
+| Prior regularization ($\sigma_T = 1000$ eV) | $-126$ eV ($-8.4\%$) | $+0.108$ ($+6.8\%$) | No change |
+| Signal ratio (2-step) | $-204$ eV ($-13.7\%$) | $+0.251$ ($+15.9\%$) | Worse |
+
+**None of the strategies reduced the bias.** This confirms that the bias is not caused by the parameterization or the objective function form, but by the fundamental information content of 5-channel polychromator measurements. Reducing the bias would require hardware-level changes: more spectral channels, optimized filter placement, or higher SNR.
+
+### 8.6 Implications for Thomson Scattering Data Analysis
+
+These findings have important implications for the interpretation of Thomson scattering data in fusion experiments:
+
+1. **All Thomson scattering $T_e$ and $n_e$ values are statistical estimates**, including the analyzed data in LHD databases. The same MLE bias affects all fitting-based analysis methods, regardless of the algorithm used.
+2. **Reported uncertainties ($dT_e$, $dn_e$) may underestimate the true error** — our PAMC analysis shows the posterior can be too narrow by a factor of ~3 when the forward model is used self-consistently.
+3. **The accuracy bottleneck is in the hardware and calibration**, not the inversion algorithm. Improvements in filter configuration, channel count, and calibration quality have greater impact than algorithmic advances.
+4. **ODAT-SE's value lies beyond point estimation** — in uncertainty quantification, model selection, and systematic bias diagnostics that are not available from traditional least-squares fitting.
+
+---
+
+## 9. Discussion
+
+### 9.1 Strengths of the ODAT-SE Approach
 
 1. **Modularity**: The Thomson forward model is a self-contained Python function, trivially swappable for other spectral models (relativistic, CTS, etc.)
 2. **Algorithm comparison**: The same forward model can be tested with all five algorithms without code changes
 3. **Bayesian model selection**: PAMC provides free energy estimates unavailable in standard fitting tools, enabling principled EVDF discrimination
 4. **Reproducibility**: Open-source framework with TOML configuration files
 
-### 8.2 Limitations and Future Work
+### 9.2 Limitations and Future Work
 
 1. **Non-relativistic approximation**: The current Gaussian spectral model is accurate only for $T_e \lesssim 3$ keV. Extending to the Selden function or Naito-Kato-Nurunaga relativistic correction is straightforward within the modular framework.
 2. **Simplified polychromator model**: Real filter functions are not perfect Gaussians and must be measured experimentally. The framework accepts arbitrary filter functions.
@@ -271,7 +354,7 @@ The computation time scales linearly: $t \approx 0.07 \times N_{rep}$ seconds (s
 
 ---
 
-## 9. Summary
+## 10. Summary
 
 We demonstrated that ODAT-SE provides an effective platform for Bayesian inverse inference of fusion plasma Thomson scattering diagnostics. Using synthetic polychromator data generated from real LHD plasma parameters:
 
