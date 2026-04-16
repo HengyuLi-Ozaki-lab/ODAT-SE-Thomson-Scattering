@@ -113,32 +113,82 @@ $$\ln B_{12} = \ln Z_1 - \ln Z_2$$
 
 ---
 
-## 4. Validation with LHD Thomson Scattering Data
+## 4. LHD Data and Synthetic Test Data Construction
 
-### 4.1 Data Source
+### 4.1 LHD Thomson Scattering Data
 
 We use analyzed Thomson scattering profile data from the Large Helical Device (LHD) [1]:
 
 - **Shot**: #175916 (January 26, 2024)
-- **Time slice**: $t = 36300.1$ ms (steady-state phase)
-- **Spatial coverage**: $R = 2418$-$4874$ mm (139 measurement points)
-- **Parameters**: $T_e$, $dT_e$, $n_e$, $dn_e$ with calibration metadata
+- **Data format**: 17 columns (time, radius, $T_e$, $dT_e$, $n_e$, $dn_e$, laser power, laser number, 9 calibration parameters)
+- **Dimensions**: 1200 time slices $\times$ 139 spatial points = 166,800 rows
+- **Units**: $T_e$ in eV, $n_e$ in $10^{16}$ m$^{-3}$
 
-### 4.2 Validation Procedure
+The LHD Thomson scattering system measures electron temperature and density profiles along the plasma major radius at 139 spatial points per laser pulse, with up to 1200 time slices per discharge.
 
-Since the LHD data provides already-analyzed $T_e$ and $n_e$ (not raw polychromator signals), the validation follows a synthetic data approach:
+We select a single time slice at $t = 36300.1$ ms during the steady-state phase. After applying data quality filters ($dT_e / T_e < 30\%$, $T_e > 20$ eV, $n_e > 10 \times 10^{16}$ m$^{-3}$), 109 spatial points remain. Five representative positions are selected for detailed analysis, spanning the full radial profile from the plasma edge to the core:
+
+![LHD profile with test points](figures/lhd_profile_with_points.png)
+
+*Fig. 3. LHD Thomson scattering radial profile (Shot #175916, $t = 36300.1$ ms). Top: electron temperature $T_e(R)$. Bottom: electron density $n_e(R)$. Gray circles with error bars: LHD analyzed data (109 good-quality points). Colored squares: five representative positions selected for ODAT-SE testing.*
+
+| Position | $R$ (mm) | $T_e$ (eV) | $dT_e$ (eV) | $n_e$ ($10^{19}$ m$^{-3}$) | $dn_e$ |
+|----------|:---:|:---:|:---:|:---:|:---:|
+| Edge | 4571 | 149 | 14 | 0.775 | 0.097 |
+| Pedestal | 4461 | 501 | 39 | 1.061 | 0.109 |
+| Mid-radius | 4119 | 1495 | 140 | 1.577 | 0.155 |
+| Near-core | 3448 | 3042 | 236 | 1.270 | 0.123 |
+| Core | 3695 | 4935 | 525 | 1.187 | 0.117 |
+
+**Important note**: The $T_e$ and $n_e$ values in this dataset are themselves the result of inverse inference — the LHD analysis pipeline fits a forward model to the raw polychromator signals. They are statistical estimates, not direct measurements, and are subject to the same MLE bias discussed in Section 8.
+
+### 4.2 Synthetic Polychromator Data Construction
+
+Since the LHD data provides already-analyzed $T_e$ and $n_e$ rather than raw polychromator signals, we construct synthetic test data through the following procedure:
+
+![Data construction process](figures/data_construction.png)
+
+*Fig. 4. Synthetic data construction for the mid-radius point ($T_e = 1495$ eV, $n_e = 1.577 \times 10^{19}$ m$^{-3}$). (a) Thomson spectrum multiplied by five polychromator filter channels. (b) Noise-free channel signals obtained by spectral integration. (c) Comparison of true (blue) and observed (orange, with error bars) signals after adding realistic noise. (d) Signal-to-noise ratio per channel, ranging from 14.9 (edge channel) to 35.4 (near-center channel).*
+
+The construction proceeds in four steps:
+
+**Step 1 — Forward model**: For a given $(T_e, n_e)$ from the LHD profile, compute the Thomson scattering spectrum $S(\lambda; T_e)$ and integrate through each polychromator filter:
+
+$$S_i^{true} = n_e \int T_i(\lambda) \cdot S(\lambda; T_e)\,d\lambda$$
+
+**Step 2 — Noise generation**: Apply a realistic noise model:
+
+$$S_i^{obs} = \text{Poisson}(S_i^{true} \cdot C + S_i^{stray} \cdot C) / C + \mathcal{N}(0, \sigma_{readout}) / C$$
+
+where $C = 5000$ (photon scaling), $\sigma_{readout} = 3$ photoelectrons, and stray light is concentrated near the laser wavelength ($S_3^{stray} = 0.05$).
+
+**Step 3 — Uncertainty estimation**:
+
+$$\sigma_i = \frac{1}{C}\sqrt{C \cdot S_i^{true} + C \cdot S_i^{stray} + \sigma_{readout}^2}$$
+
+**Step 4 — Objective function**: The resulting 5-channel observed signals and uncertainties define the $\chi^2$ objective for ODAT-SE.
+
+Channel-level data for the mid-radius test point:
+
+| Channel | Center (nm) | True signal | Observed signal | $\sigma$ | SNR |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| 1 | 900 | 0.0461 | 0.0494 | 0.0031 | 14.9 |
+| 2 | 960 | 0.1474 | 0.1527 | 0.0055 | 26.9 |
+| 3 | 1020 | 0.2801 | 0.3262 | 0.0081 | 34.4 |
+| 4 | 1120 | 0.2568 | 0.2595 | 0.0073 | 35.4 |
+| 5 | 1200 | 0.0845 | 0.0839 | 0.0042 | 20.3 |
+
+This is a **self-consistent synthetic validation**: the same forward model generates the test data and performs the inversion. This approach allows exact knowledge of the true parameters for quantitative error assessment, but does not test the accuracy of the forward model itself against real polychromator hardware.
+
+### 4.3 Inversion Results
+
+Using the synthetic polychromator data, we apply ODAT-SE algorithms to recover $T_e$ and $n_e$. The validation compares the inversion results with the original LHD values:
 
 1. Extract real $T_e$, $n_e$ from LHD profiles as ground-truth parameters
 2. Compute theoretical polychromator signals using the forward model
-3. Add realistic noise (Poisson + readout + stray light)
-4. Run ODAT-SE algorithms to recover $T_e$, $n_e$
-5. Compare inversion results with the original LHD values
+### 4.4 Five-Point Inversion (Nelder-Mead + PAMC)
 
-This tests the complete inference pipeline under realistic conditions, with the advantage that the true parameter values are known exactly for quantitative error assessment.
-
-### 4.3 Five-Point Inversion (Nelder-Mead + PAMC)
-
-Five representative radial positions were selected from the LHD profile:
+Five representative radial positions were tested:
 
 | Region | $T_e^{LHD}$ (eV) | $T_e^{inv}$ (eV) | $T_e$ err | $n_e^{LHD}$ ($10^{19}$) | $n_e^{inv}$ | $n_e$ err |
 |--------|:--:|:--:|:--:|:--:|:--:|:--:|
@@ -148,13 +198,13 @@ Five representative radial positions were selected from the LHD profile:
 | Near-core | 3042 | 2701 | 11.2% | 1.270 | 1.307 | 2.9% |
 | Core | 4935 | 4187 | 15.2% | 1.187 | 1.223 | 3.0% |
 
-### 4.4 Full Profile Reconstruction (109 points)
+### 4.5 Full Profile Reconstruction (109 points)
 
 Nelder-Mead optimization was applied to all 109 spatial points with good data quality ($dT_e/T_e < 30\%$):
 
 ![LHD profile reconstruction](figures/lhd_profile_scan.png)
 
-*Fig. 3. ODAT-SE reconstruction of the LHD Thomson scattering radial profile (Shot #175916, $t = 36300.1$ ms). Gray circles: LHD analyzed values with error bars. Blue squares: ODAT-SE Nelder-Mead inversion results. Top: electron temperature $T_e$. Bottom: electron density $n_e$.*
+*Fig. 5. ODAT-SE reconstruction of the LHD Thomson scattering radial profile (Shot #175916, $t = 36300.1$ ms). Gray circles: LHD analyzed values with error bars. Blue squares: ODAT-SE Nelder-Mead inversion results. Top: electron temperature $T_e$. Bottom: electron density $n_e$.*
 
 Overall statistics across 109 points:
 
@@ -171,7 +221,7 @@ The PAMC algorithm provides the full posterior distribution, not just a point es
 
 ![PAMC search process](figures/pamc_search_process.png)
 
-*Fig. 4. PAMC annealing for Thomson scattering inverse inference at the LHD mid-radius position. Left: high-temperature exploration ($T = 100$) with samples broadly distributed across the parameter space. Right: low-temperature concentration ($T \approx 1$) with samples converging to the $\chi^2$ minimum near the true values (green star). Contour lines reveal the $T_e$-$n_e$ parameter correlation.*
+*Fig. 6. PAMC annealing for Thomson scattering inverse inference at the LHD mid-radius position. Left: high-temperature exploration ($T = 100$) with samples broadly distributed across the parameter space. Right: low-temperature concentration ($T \approx 1$) with samples converging to the $\chi^2$ minimum near the true values (green star). Contour lines reveal the $T_e$-$n_e$ parameter correlation.*
 
 **Key observations:**
 - At $T = 100$, the population explores the full prior parameter space, providing global coverage
@@ -224,7 +274,7 @@ The inversion accuracy was tested across SNR levels from 5 to 100, with 10 indep
 
 ![Noise sensitivity](figures/noise_sensitivity.png)
 
-*Fig. 5. Inversion accuracy (relative error) as a function of signal-to-noise ratio. Each point represents the mean over 10 trials; error bars show the standard deviation. Both $T_e$ and $n_e$ errors decrease monotonically with increasing SNR, with $n_e$ being more sensitive to noise at low SNR.*
+*Fig. 7. Inversion accuracy (relative error) as a function of signal-to-noise ratio. Each point represents the mean over 10 trials; error bars show the standard deviation. Both $T_e$ and $n_e$ errors decrease monotonically with increasing SNR, with $n_e$ being more sensitive to noise at low SNR.*
 
 **Key findings:**
 - At SNR = 20 (typical for LHD), $T_e$ error is ~6% and $n_e$ error is ~10%
@@ -237,7 +287,7 @@ The forward model validity was tested across the full $T_e$ range relevant to LH
 
 ![Te coverage](figures/te_coverage.png)
 
-*Fig. 6. (a) Inverted vs. true $T_e$ across the range 50--8000 eV. The diagonal line indicates perfect recovery. (b) Relative error for each $T_e$ value.*
+*Fig. 8. (a) Inverted vs. true $T_e$ across the range 50--8000 eV. The diagonal line indicates perfect recovery. (b) Relative error for each $T_e$ value.*
 
 The non-relativistic Gaussian model works well for $T_e \lesssim 3000$ eV (errors < 10%). At higher temperatures, the error increases due to the absence of the Selden relativistic correction, which would broaden the blue-shifted wing relative to the Gaussian approximation.
 
@@ -247,7 +297,7 @@ The effect of the number of PAMC replicas on computation time, posterior quality
 
 ![PAMC scalability](figures/pamc_scalability.png)
 
-*Fig. 7. PAMC scalability with replica count. (a) Wall-clock time scales linearly with the number of replicas. (b) Posterior width ($T_e$ standard deviation) stabilizes above ~50 replicas. (c) Free energy estimate $\ln Z$ converges as the replica count increases.*
+*Fig. 9. PAMC scalability with replica count. (a) Wall-clock time scales linearly with the number of replicas. (b) Posterior width ($T_e$ standard deviation) stabilizes above ~50 replicas. (c) Free energy estimate $\ln Z$ converges as the replica count increases.*
 
 The computation time scales linearly: $t \approx 0.07 \times N_{rep}$ seconds (single core). With 100 replicas (sufficient for converged posteriors), a single-point inference completes in ~7 seconds. The free energy estimate stabilizes at $N_{rep} \gtrsim 100$, which is important for reliable model selection.
 
@@ -265,11 +315,11 @@ To rigorously characterize this bias, we performed a Monte Carlo study: for the 
 
 ![MLE scatter distribution](figures/mc_stat_scatter.png)
 
-*Fig. 8. Distribution of parameter estimates over 200 independent noise realizations. Left: Nelder-Mead MLE scatter with 1σ ellipse. Right: PAMC posterior mean scatter with individual error bars. In both cases, the distribution is centered away from the true value (red star), revealing a systematic bias.*
+*Fig. 10. Distribution of parameter estimates over 200 independent noise realizations. Left: Nelder-Mead MLE scatter with 1σ ellipse. Right: PAMC posterior mean scatter with individual error bars. In both cases, the distribution is centered away from the true value (red star), revealing a systematic bias.*
 
 ![MLE bias histograms](figures/mc_stat_histograms.png)
 
-*Fig. 9. Top: distributions of $T_e$ and $n_e$ estimates from Nelder-Mead (blue) and PAMC (green) across Monte Carlo trials. True values are marked by red dashed lines. Bottom: relative error distributions showing the mean bias is non-zero for both algorithms.*
+*Fig. 11. Top: distributions of $T_e$ and $n_e$ estimates from Nelder-Mead (blue) and PAMC (green) across Monte Carlo trials. True values are marked by red dashed lines. Bottom: relative error distributions showing the mean bias is non-zero for both algorithms.*
 
 **Key results:**
 
@@ -286,7 +336,7 @@ For each of the 50 PAMC trials, we tested whether the true parameter values fell
 
 ![PAMC coverage](figures/mc_stat_coverage.png)
 
-*Fig. 10. PAMC posterior coverage probability. Observed coverage (green) compared to expected Gaussian coverage (gray). The posterior is systematically too narrow, indicating underestimated uncertainties.*
+*Fig. 12. PAMC posterior coverage probability. Observed coverage (green) compared to expected Gaussian coverage (gray). The posterior is systematically too narrow, indicating underestimated uncertainties.*
 
 | Interval | $T_e$ observed | $T_e$ expected | $n_e$ observed | $n_e$ expected |
 |----------|:-:|:-:|:-:|:-:|
@@ -314,7 +364,7 @@ We tested three objective function modifications to reduce the bias:
 
 ![Bias comparison](figures/bias_comparison.png)
 
-*Fig. 11. Comparison of four objective function strategies (100 MC trials each). None significantly reduces the systematic bias.*
+*Fig. 13. Comparison of four objective function strategies (100 MC trials each). None significantly reduces the systematic bias.*
 
 | Strategy | $T_e$ bias | $n_e$ bias | Effect |
 |----------|:---:|:---:|--------|
